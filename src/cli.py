@@ -8,7 +8,6 @@ import click
 @click.group()
 def main():
     """Brownfield Cartographer - Codebase Intelligence System"""
-    pass
 
 
 @main.command()

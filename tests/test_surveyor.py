@@ -1,8 +1,6 @@
 """Tests for Surveyor agent."""
 
 
-
-
 def test_import_graph_basic():
     """Test that import graph can be created."""
     assert True

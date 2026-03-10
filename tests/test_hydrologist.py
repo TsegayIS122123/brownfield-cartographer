@@ -1,7 +1,6 @@
 """Tests for Hydrologist agent."""
 
 
-
 def test_sql_lineage_extraction():
     """Test SQL dependency extraction with sqlglot."""
     assert True
