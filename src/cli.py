@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Command-line interface for Brownfield Cartographer."""
 
-
 import click
 
 
 @click.group()
 def main():
     """Brownfield Cartographer - Codebase Intelligence System"""
+    pass
 
 
 @main.command()
@@ -34,16 +34,14 @@ def query():
             if cmd.lower() in ["exit", "quit"]:
                 break
             elif cmd.lower() == "help":
-                click.echo(
-                    """
+                click.echo("""
 Available commands:
   find_implementation <concept>  - Search for where concept is implemented
   trace_lineage <dataset>        - Show data lineage
   blast_radius <module>          - Show impact of changing module
   explain_module <path>          - Explain what module does
   exit                           - Exit query mode
-                """
-                )
+                """)
             else:
                 click.echo(f"Processing: {cmd}")
                 # TODO: Implement Navigator agent
