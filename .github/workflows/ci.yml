@@ -14,70 +14,48 @@ jobs:
         python-version: ["3.11"]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4  # Updated to v4
     
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5  # Updated to v5
       with:
         python-version: ${{ matrix.python-version }}
     
-    - name: Install UV
-      run: |
-        pip install uv
-    
     - name: Install dependencies
       run: |
+        pip install uv
         uv venv
         source .venv/bin/activate
-        uv pip install -e ".[dev]"
-    
-    - name: Format check with black
-      run: |
-        source .venv/bin/activate
-        black --check src/ tests/ || echo "⚠️ Black would reformat files - run 'black src/ tests/' locally"
-    
-    - name: Lint with ruff
-      run: |
-        source .venv/bin/activate
-        ruff check src/ tests/ || echo "⚠️ Ruff found issues - run 'ruff check src/ tests/ --fix' locally"
+        uv pip install pytest pytest-cov  # Only install what you need
+        uv pip install -e .
     
     - name: Test with pytest
       run: |
         source .venv/bin/activate
-        pytest tests/ -v --cov=src/ --cov-report=xml || echo "⚠️ Tests failed"
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-      continue-on-error: true
+        pytest tests/ -v --cov=src/
 
   build:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4  # Updated to v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5  # Updated to v5
       with:
         python-version: "3.11"
     
-    - name: Install UV
-      run: pip install uv
-    
     - name: Build package
       run: |
+        pip install uv
         uv venv
         source .venv/bin/activate
         uv pip install build
         python -m build
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # Updated to v4
       with:
         name: dist
         path: dist/
-      continue-on-error: true
