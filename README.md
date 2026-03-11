@@ -138,6 +138,118 @@ brownfield-cartographer/
 ├── pyproject.toml              # Project config
 └── README.md                   # This file
 ```
+
+---
+
+## 📊 Phase 0: Target Codebase Reconnaissance
+
+### 🎯 Selected Target: [Apache Superset](https://github.com/apache/superset)
+
+<div align="center">
+
+| Metric | Value |
+|--------|-------|
+| **Repository** | apache/superset |
+| **Analysis Date** | March 10, 2026 |
+| **Duration** | 30 minutes |
+| **Total Files** | ~7,441 |
+| **Python Files** | 1,856 |
+| **YAML Files** | 150+ |
+| **Frontend Files** | 1,000+ |
+
+</div>
+
+### 🔍 Five FDE Day-One Questions - Quick Answers
+
+| Question | Answer |
+|----------|--------|
+| **Primary ingestion path?** | Database connections via SQLAlchemy (no file ingestion) |
+| **Critical outputs?** | Featured and Sales dashboards in `examples/` (YAML) |
+| **Blast radius?** | `sql_lab.py` failure impacts entire SQL Lab + all charts |
+| **Business logic location?** | Concentrated in `viz.py` (132 functions) + `models/` |
+| **High-velocity files?** | Frontend deps (2,192 changes) + `views/core.py` (767 changes) |
+
+### 🏗️ Target Architecture: Apache Superset
+
+```mermaid
+graph TB
+    subgraph Frontend["Frontend Layer (TypeScript/React)"]
+        UI[SQL Lab UI]
+        Dashboard[Dashboard Editor]
+        Chart[Chart Builder]
+        Viz[Visualizations]
+    end
+
+    subgraph API["API Layer (Python/Flask)"]
+        Views[Views/API Endpoints]
+        Security[Security Manager]
+        Core[Core Views]
+    end
+
+    subgraph Logic["Business Logic Layer"]
+        VizLogic[viz.py - Chart Logic]
+        Models[models/ - Data Models]
+        SQLParse[sql/parse.py - SQL Parsing]
+    end
+
+    subgraph Execution["SQL Execution Layer"]
+        SQLLab[sql_lab.py - SQL Engine]
+        Connectors[connectors/ - DB Connectors]
+        DBSpecs[db_engine_specs/ - 40+ DB Dialects]
+    end
+
+    subgraph Data["Data Layer"]
+        Database[(Databases)]
+        Metadata[(Metadata DB)]
+        Examples[examples/ - YAML Dashboards]
+    end
+
+    subgraph Config["Configuration Layer"]
+        YAML[YAML Configs]
+        Docker[Docker/K8s]
+    end
+
+    %% Connections
+    Frontend --> API
+    API --> Logic
+    Logic --> Execution
+    Execution --> Data
+    Config --> API
+    Config --> Execution
+
+    %% Critical Path Highlight
+    style SQLLab fill:#ff9999,stroke:#ff0000,stroke-width:3px
+    style Database fill:#99ff99,stroke:#00ff00
+    style VizLogic fill:#9999ff,stroke:#0000ff
+```
+# 📈 Key Insights for Cartographer Development
+```bash
+Priority	  Feature	                             Why
+🔴 CRITICAL	  Extract SQL from Python strings 	   No standalone .sql files
+🔴 CRITICAL	  Build dependency graph	            Database class imported in 100+ files
+🔴 CRITICAL   Parse YAML dashboard definitions	    Critical outputs in examples/
+🟡 HIGH	      Track change frequency	              viz.py (484 changes) = active pain point
+🟡 HIGH	       Detect dead code	                      Files with only 1 change ever
+🟢 MEDIUM	   Map API endpoints	                  @api decorators in views/
+📁 Target     Repository Structure
+
+apache/superset/
+├── superset/                 # Python backend (1,856 files)
+│   ├── sql_lab.py           # Core SQL engine ⚡
+│   ├── viz.py               # Visualization logic (132 functions)
+│   ├── models/              # Data models
+│   ├── views/               # API endpoints
+│   └── db_engine_specs/     # 40+ database connectors
+├── superset-frontend/        # TypeScript React app (1,000+ files)
+│   ├── src/SqlLab/          # SQL editor UI
+│   └── plugins/             # Chart plugins
+├── superset/examples/        # YAML dashboard definitions
+│   ├── featured_charts/     # Critical outputs
+│   └── sales_dashboard/     # Business metrics
+├── docs/                     # Documentation
+└── helm/                     # Kubernetes configs
+
+```
 # 🚀 Quick Start
 ## Prerequisites
 - Python 3.11+ 
