@@ -8,7 +8,6 @@ from typing import Dict, List, Optional, Set, Tuple, Any
 import re
 import networkx as nx
 from git import Repo, InvalidGitRepositoryError
-
 from src.models.schemas import ModuleNode, ImportEdge, GraphMetadata
 from src.analyzers.tree_sitter_analyzer import ModuleAnalyzer
 
@@ -187,26 +186,31 @@ class ModuleGraphBuilder:
             # Resolve import path
             target = self.resolve_import_path(imp, file_path)
             
+            # In add_imports method:
+
             if target:
                 if target in self.modules:
-                    self.graph.add_edge(rel_path, target, type="imports")
-                    edges.append(ImportEdge(
+                    # Create typed import edge
+                    edge = ImportEdge(
                         source=rel_path,
                         target=target,
                         import_type="absolute",
-                        line_number=0
-                    ))
+                        line_number=0,  # You can extract actual line number from AST if available
+                        is_dynamic=False,
+                        alias=None
+                    )
+                    # Add to knowledge graph using typed method
+                    self.knowledge_graph.add_import_edge(edge)
+                    edges.append(edge)
                     
                     # Update imported_by lists
                     if target in self.modules:
                         if rel_path not in self.modules[target].imported_by:
                             self.modules[target].imported_by.append(rel_path)
                             logger.debug(f"Added import: {rel_path} -> {target}")
-                else:
-                    logger.debug(f"Target module {target} not found in modules dict")
             else:
                 # Create virtual node for external import
-                virtual_target = f"external:{module_name}"
+                virtual_target = f"external:{imp}"
                 if virtual_target not in self.modules:
                     from src.models.schemas import ModuleNode
                     virtual_module = ModuleNode(
@@ -214,17 +218,25 @@ class ModuleGraphBuilder:
                         language="external",
                         loc=0,
                         imports=[],
+                        change_velocity_30d=0,
+                        is_dead_code_candidate=False,
+                        pagerank_score=0.0,
+                        in_circular_dependency=False
                     )
                     self.modules[virtual_target] = virtual_module
                     self.graph.add_node(virtual_target, **virtual_module.dict())
                 
-                self.graph.add_edge(rel_path, virtual_target, type="imports")
-                edges.append(ImportEdge(
+                # Create typed import edge for external
+                edge = ImportEdge(
                     source=rel_path,
                     target=virtual_target,
                     import_type="external",
-                    line_number=0
-                ))
+                    line_number=0,
+                    is_dynamic=False,
+                    alias=None
+                )
+                self.knowledge_graph.add_import_edge(edge)
+                edges.append(edge)
                 logger.debug(f"Added external import: {rel_path} -> {virtual_target}")
         
         return edges

@@ -9,6 +9,7 @@ from src.analyzers.python_data_flow import PythonDataFlowAnalyzer
 from src.analyzers.sql_lineage import SQLLineageAnalyzer
 from src.analyzers.dag_config_parser import DAGConfigAnalyzer
 from src.graph.lineage_graph import LineageGraph
+from src.models.schemas import ProducesEdge, ConsumesEdge, DatasetNode, TransformationNode
 
 logger = logging.getLogger(__name__)
 
@@ -200,24 +201,73 @@ class HydrologistAgent:
                 transform_id = f"python:{op['file']}:L{op['line']}"
                 dataset_id = f"dataset:{op['dataset']}"
                 
-                self.lineage_graph.add_transformation(transform_id, 
-                                                     file=op['file'],
-                                                     line=op['line'],
-                                                     operation=op['type'])
-                self.lineage_graph.add_dataset(dataset_id)
-                self.lineage_graph.add_read_edge(transform_id, dataset_id)
+                # Add transformation node
+                transform_node = TransformationNode(
+                    source_datasets=[dataset_id],
+                    target_datasets=[],
+                    transformation_type=op.get("type", "unknown"),
+                    source_file=op['file'],
+                    line_range=(op['line'], op['line']),
+                    framework="python",
+                    transformation_logic=op.get("code", "")
+                )
+                self.lineage_graph.add_transformation_node(transform_id, transform_node)
+                
+                # Add dataset node
+                dataset_node = DatasetNode(
+                    name=op['dataset'],
+                    storage_type="unknown",
+                    is_source_of_truth=False
+                )
+                self.lineage_graph.add_dataset_node(dataset_id, dataset_node)
+                
+                # Create typed consumes edge (dataset → transformation)
+                edge = ConsumesEdge(
+                    source=dataset_id,
+                    target=transform_id,
+                    transformation_type=op.get("type", "unknown"),
+                    source_file=op['file'],
+                    line_range=(op['line'], op['line']),
+                    is_filter="filter" in op.get("type", "").lower(),
+                    join_type=None
+                )
+                self.lineage_graph.add_consumes_edge(edge)
         
         for op in python.get("writes", []):
             if op.get("dataset"):
                 transform_id = f"python:{op['file']}:L{op['line']}"
                 dataset_id = f"dataset:{op['dataset']}"
                 
-                self.lineage_graph.add_transformation(transform_id, 
-                                                     file=op['file'],
-                                                     line=op['line'],
-                                                     operation=op['type'])
-                self.lineage_graph.add_dataset(dataset_id)
-                self.lineage_graph.add_write_edge(transform_id, dataset_id)
+                # Add transformation node
+                transform_node = TransformationNode(
+                    source_datasets=[],
+                    target_datasets=[dataset_id],
+                    transformation_type=op.get("type", "unknown"),
+                    source_file=op['file'],
+                    line_range=(op['line'], op['line']),
+                    framework="python",
+                    transformation_logic=op.get("code", "")
+                )
+                self.lineage_graph.add_transformation_node(transform_id, transform_node)
+                
+                # Add dataset node
+                dataset_node = DatasetNode(
+                    name=op['dataset'],
+                    storage_type="unknown",
+                    is_source_of_truth=False
+                )
+                self.lineage_graph.add_dataset_node(dataset_id, dataset_node)
+                
+                # Create typed produces edge (transformation → dataset)
+                edge = ProducesEdge(
+                    source=transform_id,
+                    target=dataset_id,
+                    transformation_type=op.get("type", "unknown"),
+                    source_file=op['file'],
+                    line_range=(op['line'], op['line']),
+                    is_incremental=False
+                )
+                self.lineage_graph.add_produces_edge(edge)
         
         # Add SQL operations from successful parses
         for lineage in sql.get("lineage_results", []):
