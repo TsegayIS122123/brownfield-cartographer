@@ -14,14 +14,13 @@ dependencies = [
     "pydantic>=2.12.5",
     "pydantic-core>=2.41.5",
     
-    # Static Analysis
+    # Static Analysis - tree-sitter
     "tree-sitter>=0.21.3",
     "tree-sitter-python>=0.21.0",
     "tree-sitter-sql>=0.1.0",
     "tree-sitter-yaml>=0.5.0",
-    
-    # Data Lineage
-    "sqlglot>=26.11.0",
+    "tree-sitter-typescript>=0.21.0",
+    "tree-sitter-javascript>=0.21.0",
     
     # Graph Analysis
     "networkx>=3.2.1",
@@ -29,41 +28,23 @@ dependencies = [
     # Git Analysis
     "gitpython>=3.1.46",
     
-    # LLM Integration
-    "langchain-core>=1.2.16",
-    "langchain-google-genai>=4.2.1",
-    "langgraph>=1.0.10",
-    "google-genai>=1.65.0",
-    
-    # Vector Store
-    "numpy>=2.2.0",
+    # Data Lineage (partial for Phase 1)
+    "sqlglot>=26.11.0",
     
     # Utilities
     "pyyaml>=6.0.3",
-    "requests>=2.32.5",
-    "filetype>=1.2.0",
-    
-    # CLI
     "click>=8.1.7",
+    "pathspec>=0.12.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-    # Testing
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
-    "pytest-mock>=3.12.0",
-    
-    # Linting & Formatting
     "black>=24.0.0",
     "isort>=5.13.0",
     "ruff>=0.3.0",
     "mypy>=1.8.0",
-    "autoflake>=2.2.0",
-    
-    # Documentation
-    "mkdocs>=1.5.0",
-    "mkdocs-material>=9.5.0",
 ]
 
 [project.scripts]
@@ -80,22 +61,15 @@ include = ["src*"]
 [tool.black]
 line-length = 100
 target-version = ["py311"]
-skip-magic-trailing-comma = true  # Add this
-skip-string-normalization = false  # Add this
-preview = false  # Add this
 
 [tool.isort]
 profile = "black"
 line_length = 100
-force_sort_within_sections = true  # Add this
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
-warn_unused_ignores = true  # Add this
-warn_redundant_casts = true  # Add this
-warn_unused_configs = true  # Add this
 
 [tool.ruff]
 line-length = 100

@@ -7,3 +7,6 @@ src/brownfield_cartographer.egg-info/dependency_links.txt
 src/brownfield_cartographer.egg-info/entry_points.txt
 src/brownfield_cartographer.egg-info/requires.txt
 src/brownfield_cartographer.egg-info/top_level.txt
+tests/test_cli.py
+tests/test_hydrologist.py
+tests/test_surveyor.py
