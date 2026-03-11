@@ -279,22 +279,6 @@ jaffle-shop/
 - [x] Created ground truth in `RECONNAISSANCE.md`
 - [x] Identified critical path: `stg_orders` → `orders` → `customers`
 
-### 🔜 Next Steps: Phase 1 - Surveyor Agent
-
-Building static structure analyzer with:
-- 🌳 tree-sitter AST parsing for SQL
-- 📊 Import graph extraction (dbt `ref()` dependencies)
-- ⚡ Git velocity analysis
-- 💀 Dead code detection
-```
-
-```
-# 📝 COMPLETE PHASE 1 & 2 EXPLANATION FOR README.md
-
-Here's the enhanced section for your README.md that explains **everything you did and found** in Phase 1 and Phase 2:
-
-```markdown
-
 ---
 
 ## 🚀 Phase 1 & 2: Surveyor + Hydrologist  
