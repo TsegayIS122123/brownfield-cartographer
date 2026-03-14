@@ -12,10 +12,10 @@ import networkx as nx
 from src.agents.surveyor import SurveyorAgent
 from src.agents.hydrologist import HydrologistAgent
 from src.agents.semanticist import SemanticistAgent
-from src.agents.archivist import ArchivistAgent           # NEW
-from src.agents.navigator import NavigatorAgent          # NEW
+from src.agents.archivist import ArchivistAgent
+from src.agents.navigator import NavigatorAgent
 from src.graph.knowledge_graph import KnowledgeGraph
-from src.utils.git_utils import GitChangeDetector        # NEW
+from src.utils.git_utils import GitChangeDetector
 
 logger = logging.getLogger(__name__)
 
@@ -48,107 +48,136 @@ class Phase1Orchestrator:
         self.navigator = None
         
         self.knowledge_graph = KnowledgeGraph()
+        self.changed_files = []
     
-    def run(self) -> Dict:
-        """Run the complete Phase 1-4 analysis."""
+    def run(self, incremental: bool = False) -> Dict:
+        """Run the complete Phase 1-4 analysis, preserving partial results."""
         logger.info(f"Starting analysis of {self.repo_path}")
         
+        results = {
+            "surveyor": None,
+            "hydrologist": None,
+            "semanticist": None,
+            "archivist": None,
+            "knowledge_graph": self.knowledge_graph,
+            "summary": {}
+        }
+        
         # ========== PHASE 1: SURVEYOR ==========
-        logger.info("=" * 50)
-        logger.info("🔍 PHASE 1: Running Surveyor Agent...")
-        logger.info("=" * 50)
-        
-        surveyor_results = self.surveyor.analyze()
-        
-        # Build knowledge graph from Surveyor results
-        self._build_knowledge_graph(surveyor_results)
+        try:
+            logger.info("=" * 50)
+            logger.info("🔍 PHASE 1: Running Surveyor Agent...")
+            logger.info("=" * 50)
+            
+            surveyor_results = self.surveyor.analyze()
+            results["surveyor"] = surveyor_results
+            
+            # Build knowledge graph from Surveyor results
+            self._build_knowledge_graph(surveyor_results)
+            
+            # Save intermediate results
+            self._save_intermediate("surveyor", surveyor_results)
+            
+        except Exception as e:
+            logger.error(f"❌ Surveyor failed: {e}")
+            # Continue to next phase with whatever we have
         
         # ========== PHASE 2: HYDROLOGIST ==========
-        logger.info("=" * 50)
-        logger.info("💧 PHASE 2: Running Hydrologist Agent...")
-        logger.info("=" * 50)
-        
-        hydrologist_results = self.hydrologist.analyze()
-        
-        # Merge Hydrologist results into knowledge graph
-        self._merge_lineage_results(hydrologist_results)
+        try:
+            logger.info("=" * 50)
+            logger.info("💧 PHASE 2: Running Hydrologist Agent...")
+            logger.info("=" * 50)
+            
+            hydrologist_results = self.hydrologist.analyze()
+            results["hydrologist"] = hydrologist_results
+            
+            # Merge Hydrologist results into knowledge graph
+            self._merge_lineage_results(hydrologist_results)
+            
+            # Save intermediate results
+            self._save_intermediate("hydrologist", hydrologist_results)
+            
+        except Exception as e:
+            logger.error(f"❌ Hydrologist failed: {e}")
         
         # ========== PHASE 3: SEMANTICIST ==========
-        logger.info("=" * 50)
-        logger.info("🧠 PHASE 3: Running Semanticist Agent...")
-        logger.info("=" * 50)
-        
-        # Initialize Semanticist with budget limit
-        self.semanticist = SemanticistAgent(
-            repo_path=self.repo_path, 
-            budget_limit=5.0  # $5 budget for LLM calls
-        )
-        
-        semanticist_results = self.semanticist.analyze(
-            surveyor_results=surveyor_results,
-            hydrologist_results=hydrologist_results
-        )
-        
-        # Merge Semanticist results into knowledge graph
-        self._merge_semantic_results(semanticist_results)
+        try:
+            logger.info("=" * 50)
+            logger.info("🧠 PHASE 3: Running Semanticist Agent...")
+            logger.info("=" * 50)
+            
+            self.semanticist = SemanticistAgent(
+                repo_path=self.repo_path, 
+                budget_limit=5.0
+            )
+            
+            semanticist_results = self.semanticist.analyze(
+                surveyor_results=results["surveyor"] or {},
+                hydrologist_results=results["hydrologist"] or {}
+            )
+            results["semanticist"] = semanticist_results
+            
+            # Merge Semanticist results
+            self._merge_semantic_results(semanticist_results)
+            
+            # Save intermediate results
+            self._save_intermediate("semanticist", semanticist_results)
+            
+        except Exception as e:
+            logger.error(f"❌ Semanticist failed: {e}")
         
         # ========== PHASE 4: ARCHIVIST ==========
-        logger.info("=" * 50)
-        logger.info("📚 PHASE 4: Running Archivist Agent...")
-        logger.info("=" * 50)
+        try:
+            logger.info("=" * 50)
+            logger.info("📚 PHASE 4: Running Archivist Agent...")
+            logger.info("=" * 50)
 
-        self.archivist = ArchivistAgent(output_dir=self.output_dir)
-        archivist_results = self.archivist.generate_all(
-            surveyor_results=surveyor_results,
-            hydrologist_results=hydrologist_results,
-            semanticist_results=semanticist_results,
-            knowledge_graph=self.knowledge_graph
-        )
-
-        # Initialize Navigator
-        self.navigator = NavigatorAgent(
-            knowledge_graph=self.knowledge_graph,
-            lineage_graph=hydrologist_results.get("lineage_graph") if hydrologist_results else None,
-            semanticist_results=semanticist_results,
-            archivist=self.archivist
-        )
-
-        # Check for incremental updates
-        git_detector = GitChangeDetector(self.repo_path)
-        changed_files, needs_full = git_detector.get_changed_files()
-        if changed_files:
-            logger.info(f"📝 {len(changed_files)} files changed since last analysis")
-            # Store for potential incremental update (can be used later)
-            self.changed_files = changed_files
+            self.archivist = ArchivistAgent(output_dir=self.output_dir)
+            archivist_results = self.archivist.generate_all(
+                surveyor_results=results["surveyor"] or {},
+                hydrologist_results=results["hydrologist"] or {},
+                semanticist_results=results["semanticist"] or {},
+                knowledge_graph=self.knowledge_graph
+            )
+            results["archivist"] = archivist_results
+            
+        except Exception as e:
+            logger.error(f"❌ Archivist failed: {e}")
         
-        # ========== SAVE ARTIFACTS ==========
-        logger.info("=" * 50)
-        logger.info("💾 Saving artifacts...")
-        logger.info("=" * 50)
+        # ========== INCREMENTAL UPDATE TRACKING ==========
+        try:
+            if incremental:
+                git_detector = GitChangeDetector(self.repo_path)
+                changed_files, needs_full = git_detector.get_changed_files()
+                if changed_files:
+                    self.changed_files = changed_files
+                    logger.info(f"📝 {len(changed_files)} files changed since last analysis")
+        except Exception as e:
+            logger.error(f"❌ Incremental update check failed: {e}")
         
-        self._save_artifacts(surveyor_results, hydrologist_results, semanticist_results, archivist_results)
-        
-        # ========== GENERATE SUMMARY ==========
-        summary = self._generate_summary(
-            surveyor_results, 
-            hydrologist_results, 
-            semanticist_results,
-            archivist_results
+        # ========== GENERATE SUMMARY (always) ==========
+        results["summary"] = self._generate_summary(
+            results["surveyor"] or {}, 
+            results["hydrologist"] or {}, 
+            results["semanticist"] or {},
+            results.get("archivist", {})
         )
         
         logger.info("=" * 50)
         logger.info("✅ Analysis Complete!")
         logger.info("=" * 50)
         
-        return {
-            "surveyor": surveyor_results,
-            "hydrologist": hydrologist_results,
-            "semanticist": semanticist_results,
-            "archivist": archivist_results,
-            "navigator": self.navigator,
-            "knowledge_graph": self.knowledge_graph,
-            "summary": summary,
-        }
+        return results
+    
+    def _save_intermediate(self, phase: str, data: Dict):
+        """Save intermediate results even if later phases fail."""
+        phase_file = self.output_dir / f"{phase}_intermediate.json"
+        try:
+            with open(phase_file, 'w', encoding='utf-8') as f:
+                json.dump(self._serialize_for_json(data), f, indent=2, cls=DateTimeEncoder)
+            logger.info(f"✅ Intermediate {phase} results saved to {phase_file}")
+        except Exception as e:
+            logger.error(f"Failed to save intermediate {phase} results: {e}")
     
     def _build_knowledge_graph(self, surveyor_results: Dict):
         """Build knowledge graph from Surveyor results."""
