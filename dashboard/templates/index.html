@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brownfield Cartographer Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; }
+        .navbar-brand { font-weight: 600; }
+        .card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .card-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px 10px 0 0 !important; }
+        .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .stat-value { font-size: 2.5rem; font-weight: 600; color: #667eea; }
+        .stat-label { color: #6c757d; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+        .node-module { fill: #ff9999; }
+        .node-dataset { fill: #99ff99; }
+        .node-transformation { fill: #9999ff; }
+        .node-function { fill: #ffff99; }
+        .link { stroke: #999; stroke-opacity: 0.3; stroke-width: 1.5px; }
+        .link-imports { stroke: #ff6b6b; stroke-opacity: 0.6; stroke-width: 2px; }
+        .link-produces { stroke: #4ecdc4; stroke-opacity: 0.6; stroke-width: 2px; }
+        .link-consumes { stroke: #45b7d1; stroke-opacity: 0.6; stroke-width: 2px; }
+        .tooltip { position: absolute; padding: 10px; background: rgba(0,0,0,0.8); color: white; border-radius: 5px; pointer-events: none; font-size: 12px; }
+        #graph-container { height: 600px; background: white; border-radius: 10px; border: 1px solid #dee2e6; }
+        .trace-item { padding: 10px; border-left: 4px solid; margin-bottom: 10px; background: white; border-radius: 5px; }
+        .trace-success { border-left-color: #28a745; }
+        .trace-error { border-left-color: #dc3545; }
+        .trace-warning { border-left-color: #ffc107; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-diagram-3"></i> Brownfield Cartographer Dashboard
+            </span>
+            <div class="text-light">
+                <span id="repo-name"></span>
+                <span id="analysis-time" class="ms-3"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Stats Cards -->
+        <div class="row" id="stats-cards">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-modules">-</div>
+                    <div class="stat-label">Modules Analyzed</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-imports">-</div>
+                    <div class="stat-label">Imports Found</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-sources">-</div>
+                    <div class="stat-label">Source Datasets</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-sinks">-</div>
+                    <div class="stat-label">Sink Datasets</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs mt-4" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="graph-tab" data-bs-toggle="tab" data-bs-target="#graph" type="button" role="tab">📊 Knowledge Graph</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="lineage-tab" data-bs-toggle="tab" data-bs-target="#lineage" type="button" role="tab">🔄 Data Lineage</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button" role="tab">📈 Analytics</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="docs-tab" data-bs-toggle="tab" data-bs-target="#docs" type="button" role="tab">📄 Documentation</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="trace-tab" data-bs-toggle="tab" data-bs-target="#trace" type="button" role="tab">📜 Audit Trail</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export" type="button" role="tab">⬇️ Export</button>
+            </li>
+        </ul>
+
+        <div class="tab-content mt-3" id="myTabContent">
+            <!-- Graph Tab -->
+            <div class="tab-pane fade show active" id="graph" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Knowledge Graph Visualization</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="graph-container"></div>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-primary" onclick="refreshGraph()">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                            <span class="ms-3">
+                                <span class="badge bg-danger">Modules</span>
+                                <span class="badge bg-success">Datasets</span>
+                                <span class="badge bg-primary">Transformations</span>
+                                <span class="badge bg-warning">Functions</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- In the lineage tab section, ensure you have: -->
+            <div class="tab-pane fade" id="lineage" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>Source Datasets</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul id="sources-list" class="list-group" style="max-height: 300px; overflow-y: auto;"></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>Sink Datasets</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul id="sinks-list" class="list-group" style="max-height: 300px; overflow-y: auto;"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6>Lineage Graph</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="lineage-container" style="height: 450px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Tab -->
+            <div class="tab-pane fade" id="stats" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Module Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="lang-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Top Modules by PageRank</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="pagerank-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">LLM Budget Summary</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="budget-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Docs Tab -->
+            <div class="tab-pane fade" id="docs" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">CODEBASE.md</h5>
+                            </div>
+                            <div class="card-body">
+                                <pre id="codebase-content" style="max-height: 500px; overflow-y: auto;"></pre>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Onboarding Brief</h5>
+                            </div>
+                            <div class="card-body">
+                                <pre id="brief-content" style="max-height: 500px; overflow-y: auto;"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trace Tab -->
+            <div class="tab-pane fade" id="trace" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Audit Trail</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="trace-list" style="max-height: 600px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Tab -->
+            <div class="tab-pane fade" id="export" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Export Options</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Graph Formats</h6>
+                                <button class="btn btn-outline-primary mb-2" onclick="exportDot()">
+                                    <i class="bi bi-file-code"></i> Download as DOT
+                                </button><br>
+                                <button class="btn btn-outline-primary mb-2" onclick="exportMermaid()">
+                                    <i class="bi bi-diagram-2"></i> Download as Mermaid
+                                </button><br>
+                                <button class="btn btn-outline-primary mb-2" onclick="exportJSON()">
+                                    <i class="bi bi-filetype-json"></i> Download Raw JSON
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Documentation</h6>
+                                <button class="btn btn-outline-success mb-2" onclick="exportCodebase()">
+                                    <i class="bi bi-file-text"></i> Download CODEBASE.md
+                                </button><br>
+                                <button class="btn btn-outline-success mb-2" onclick="exportBrief()">
+                                    <i class="bi bi-file-text"></i> Download Onboarding Brief
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

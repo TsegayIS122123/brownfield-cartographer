@@ -34,8 +34,52 @@ class KnowledgeGraph:
     EDGE_CONFIGURES = "configures"
     
     def __init__(self):
-        self.graph = nx.MultiDiGraph()  # Use MultiDiGraph to allow multiple edge types
+        self.graph = nx.MultiDiGraph()
         self.metadata = {}
+    
+    # ============ BASIC NODE/EDGE METHODS ============
+    
+    def add_node(self, node_id: str, **attrs):
+        """Add a node with attributes."""
+        self.graph.add_node(node_id, **attrs)
+    
+    def add_edge(self, source: str, target: str, **attrs):
+        """Add an edge with attributes.
+        
+        Args:
+            source: Source node ID
+            target: Target node ID
+            **attrs: Additional edge attributes
+        """
+        # Create a clean copy of attributes without duplicate keys
+        clean_attrs = {}
+        for key, value in attrs.items():
+            # Skip if key is 'source' or 'target' since we already have them as positional args
+            if key in ['source', 'target']:
+                continue
+            clean_attrs[key] = value
+        
+        # Handle MultiDiGraph key separately if present
+        if 'key' in clean_attrs:
+            key = clean_attrs.pop('key')
+            self.graph.add_edge(source, target, key=key, **clean_attrs)
+        else:
+            self.graph.add_edge(source, target, **clean_attrs)
+    
+    def get_node(self, node_id: str) -> Optional[Dict]:
+        """Get node attributes."""
+        if node_id in self.graph:
+            return self.graph.nodes[node_id]
+        return None
+    
+    def get_neighbors(self, node_id: str, direction: str = "both") -> List[str]:
+        """Get neighbors of a node."""
+        if direction == "out":
+            return list(self.graph.successors(node_id))
+        elif direction == "in":
+            return list(self.graph.predecessors(node_id))
+        else:
+            return list(self.graph.neighbors(node_id))
     
     # ============ TYPED NODE ADDITION METHODS ============
     
@@ -44,25 +88,25 @@ class KnowledgeGraph:
         attrs = module_data.dict()
         attrs["node_type"] = "module"
         attrs["schema_version"] = "1.0"
-        self.graph.add_node(node_id, **attrs)
+        self.add_node(node_id, **attrs)
     
     def add_dataset_node(self, node_id: str, dataset_data: DatasetNode):
         """Add a typed dataset node."""
         attrs = dataset_data.dict()
         attrs["node_type"] = "dataset"
-        self.graph.add_node(node_id, **attrs)
+        self.add_node(node_id, **attrs)
     
     def add_function_node(self, node_id: str, function_data: FunctionNode):
         """Add a typed function node."""
         attrs = function_data.dict()
         attrs["node_type"] = "function"
-        self.graph.add_node(node_id, **attrs)
+        self.add_node(node_id, **attrs)
     
     def add_transformation_node(self, node_id: str, transform_data: TransformationNode):
         """Add a typed transformation node."""
         attrs = transform_data.dict()
         attrs["node_type"] = "transformation"
-        self.graph.add_node(node_id, **attrs)
+        self.add_node(node_id, **attrs)
     
     # ============ TYPED EDGE ADDITION METHODS ============
     
@@ -70,118 +114,54 @@ class KnowledgeGraph:
         """Add a typed import edge."""
         attrs = edge_data.dict()
         attrs["edge_type"] = self.EDGE_IMPORTS
-        self.graph.add_edge(
-            edge_data.source, 
-            edge_data.target, 
-            key=self.EDGE_IMPORTS,
-            **attrs
-        )
+        self.add_edge(edge_data.source, edge_data.target, **attrs)
     
     def add_produces_edge(self, edge_data: ProducesEdge):
         """Add a typed produces edge."""
         attrs = edge_data.dict()
         attrs["edge_type"] = self.EDGE_PRODUCES
-        self.graph.add_edge(
-            edge_data.source,
-            edge_data.target,
-            key=self.EDGE_PRODUCES,
-            **attrs
-        )
+        self.add_edge(edge_data.source, edge_data.target, **attrs)
     
     def add_consumes_edge(self, edge_data: ConsumesEdge):
         """Add a typed consumes edge."""
         attrs = edge_data.dict()
         attrs["edge_type"] = self.EDGE_CONSUMES
-        self.graph.add_edge(
-            edge_data.source,
-            edge_data.target,
-            key=self.EDGE_CONSUMES,
-            **attrs
-        )
+        self.add_edge(edge_data.source, edge_data.target, **attrs)
     
     def add_calls_edge(self, edge_data: CallsEdge):
         """Add a typed calls edge."""
         attrs = edge_data.dict()
         attrs["edge_type"] = self.EDGE_CALLS
-        self.graph.add_edge(
-            edge_data.source,
-            edge_data.target,
-            key=self.EDGE_CALLS,
-            **attrs
-        )
+        self.add_edge(edge_data.source, edge_data.target, **attrs)
     
     def add_configures_edge(self, edge_data: ConfiguresEdge):
         """Add a typed configures edge."""
         attrs = edge_data.dict()
         attrs["edge_type"] = self.EDGE_CONFIGURES
-        self.graph.add_edge(
-            edge_data.source,
-            edge_data.target,
-            key=self.EDGE_CONFIGURES,
-            **attrs
-        )
+        self.add_edge(edge_data.source, edge_data.target, **attrs)
     
-    # ============ EDGE QUERY METHODS ============
+    # ============ GRAPH ANALYSIS ============
     
-    def get_imports(self, node_id: str) -> List[Dict]:
-        """Get all import edges from a node."""
-        edges = []
-        for _, target, data in self.graph.out_edges(node_id, data=True, keys=True):
-            if data.get("edge_type") == self.EDGE_IMPORTS:
-                edges.append({"target": target, **data})
-        return edges
+    def get_pagerank(self) -> Dict[str, float]:
+        """Compute PageRank scores."""
+        return nx.pagerank(self.graph)
     
-    def get_imported_by(self, node_id: str) -> List[Dict]:
-        """Get all nodes that import this node."""
-        edges = []
-        for source, _, data in self.graph.in_edges(node_id, data=True, keys=True):
-            if data.get("edge_type") == self.EDGE_IMPORTS:
-                edges.append({"source": source, **data})
-        return edges
+    def get_strongly_connected_components(self) -> List[List[str]]:
+        """Get strongly connected components."""
+        return [list(comp) for comp in nx.strongly_connected_components(self.graph)]
     
-    def get_downstream_datasets(self, node_id: str) -> List[Dict]:
-        """Get all datasets produced downstream from this node."""
-        downstream = []
-        for _, target, data in self.graph.out_edges(node_id, data=True, keys=True):
-            if data.get("edge_type") == self.EDGE_PRODUCES:
-                downstream.append({"dataset": target, **data})
-        return downstream
+    def get_modules_with_no_incoming(self) -> List[str]:
+        """Get nodes with in-degree 0."""
+        return [node for node in self.graph.nodes() if self.graph.in_degree(node) == 0]
     
-    def get_upstream_datasets(self, node_id: str) -> List[Dict]:
-        """Get all datasets consumed by this node."""
-        upstream = []
-        for source, _, data in self.graph.in_edges(node_id, data=True, keys=True):
-            if data.get("edge_type") == self.EDGE_CONSUMES:
-                upstream.append({"dataset": source, **data})
-        return upstream
+    def get_modules_with_no_outgoing(self) -> List[str]:
+        """Get nodes with out-degree 0."""
+        return [node for node in self.graph.nodes() if self.graph.out_degree(node) == 0]
     
     # ============ SERIALIZATION ============
     
-    def to_schema(self) -> KnowledgeGraphSchema:
-        """Convert graph to typed schema."""
-        nodes = []
-        for node, attrs in self.graph.nodes(data=True):
-            node_dict = {"id": node, **self._serialize_attrs(attrs)}
-            nodes.append(node_dict)
-        
-        edges = []
-        for u, v, key, attrs in self.graph.edges(data=True, keys=True):
-            edge_dict = {
-                "source": u,
-                "target": v,
-                "key": key,
-                **self._serialize_attrs(attrs)
-            }
-            edges.append(edge_dict)
-        
-        return KnowledgeGraphSchema(
-            nodes=nodes,
-            edges=edges,
-            metadata=GraphMetadata(**self.metadata)
-        )
-    
     def _serialize_attrs(self, attrs: Dict) -> Dict:
-        """Convert non-serializable attributes."""
+        """Convert non-serializable attributes to serializable format."""
         serialized = {}
         for key, value in attrs.items():
             if isinstance(value, datetime):
@@ -203,14 +183,39 @@ class KnowledgeGraph:
             return str(value)
         return value
     
+    def to_json(self) -> Dict:
+        """Convert graph to JSON-serializable dict."""
+        return {
+            "nodes": [
+                {
+                    "id": node,
+                    **self._serialize_attrs(attrs)
+                }
+                for node, attrs in self.graph.nodes(data=True)
+            ],
+            "edges": [
+                {
+                    "source": u,
+                    "target": v,
+                    **self._serialize_attrs(attrs)
+                }
+                for u, v, attrs in self.graph.edges(data=True)
+            ],
+            "metadata": {
+                **self.metadata,
+                "node_count": self.graph.number_of_nodes(),
+                "edge_count": self.graph.number_of_edges(),
+                "serialized_at": datetime.now().isoformat(),
+            }
+        }
+    
     def save_json(self, filepath: str):
         """Save graph to JSON file."""
-        schema = self.to_schema()
         with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(schema.dict(), f, indent=2, cls=DateTimeEncoder)
+            json.dump(self.to_json(), f, indent=2, cls=DateTimeEncoder)
     
     @classmethod
-    def load_json(cls, filepath: str) -> 'KnowledgeGraph':
+    def from_json(cls, filepath: str) -> 'KnowledgeGraph':
         """Load graph from JSON file."""
         with open(filepath, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -219,15 +224,17 @@ class KnowledgeGraph:
         
         for node in data.get("nodes", []):
             node_id = node.pop("id")
-            node_type = node.pop("node_type", "unknown")
-            kg.graph.add_node(node_id, **node)
+            kg.add_node(node_id, **node)
         
         for edge in data.get("edges", []):
             source = edge.pop("source")
             target = edge.pop("target")
-            key = edge.pop("key", None)
-            kg.graph.add_edge(source, target, key=key, **edge)
+            kg.add_edge(source, target, **edge)
         
         kg.metadata = data.get("metadata", {})
         
         return kg
+
+
+# Explicitly export the class
+__all__ = ['KnowledgeGraph', 'DateTimeEncoder']

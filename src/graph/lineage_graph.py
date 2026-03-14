@@ -2,9 +2,14 @@
 
 import json
 import networkx as nx
-from pathlib import Path  # ��� ADD THIS IMPORT
+from pathlib import Path
 from typing import Dict, List, Optional, Set, Any
 from datetime import datetime
+
+from src.models.schemas import (
+    DatasetNode, TransformationNode, 
+    ProducesEdge, ConsumesEdge, CallsEdge
+)
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -27,6 +32,8 @@ class LineageGraph:
             "sources": [],
             "sinks": [],
         }
+    
+    # ============ BASIC METHODS (already exist) ============
     
     def add_dataset(self, dataset_id: str, **attrs):
         """Add a dataset node (table, file, etc.)."""
@@ -51,6 +58,42 @@ class LineageGraph:
         """Add a write operation (transformation writes dataset)."""
         attrs["operation"] = "writes"
         self.add_edge(transform, dataset, **attrs)
+    
+    # ============ NEW TYPED METHODS (missing ones) ============
+    
+    def add_dataset_node(self, node_id: str, dataset_data: DatasetNode):
+        """Add a typed dataset node."""
+        attrs = dataset_data.dict()
+        attrs["type"] = "dataset"
+        attrs["schema_version"] = "1.0"
+        self.graph.add_node(node_id, **attrs)
+    
+    def add_transformation_node(self, node_id: str, transform_data: TransformationNode):
+        """Add a typed transformation node."""
+        attrs = transform_data.dict()
+        attrs["type"] = "transformation"
+        attrs["schema_version"] = "1.0"
+        self.graph.add_node(node_id, **attrs)
+    
+    def add_produces_edge(self, edge_data: ProducesEdge):
+        """Add a typed produces edge."""
+        attrs = edge_data.dict()
+        attrs["operation"] = "produces"
+        self.graph.add_edge(edge_data.source, edge_data.target, **attrs)
+    
+    def add_consumes_edge(self, edge_data: ConsumesEdge):
+        """Add a typed consumes edge."""
+        attrs = edge_data.dict()
+        attrs["operation"] = "consumes"
+        self.graph.add_edge(edge_data.source, edge_data.target, **attrs)
+    
+    def add_calls_edge(self, edge_data: CallsEdge):
+        """Add a typed calls edge."""
+        attrs = edge_data.dict()
+        attrs["operation"] = "calls"
+        self.graph.add_edge(edge_data.source, edge_data.target, **attrs)
+    
+    # ============ EXISTING METHODS (keep all) ============
     
     def blast_radius(self, node: str) -> Dict[str, Any]:
         """Find all downstream dependents of a node."""
@@ -110,7 +153,7 @@ class LineageGraph:
                 elif "model:" in node and self.graph.out_degree(node) == 0:
                     sinks.append(node)
         
-        return list(set(sinks))  # Remove duplicates
+        return list(set(sinks))
     
     def find_upstream(self, node: str, depth: int = -1) -> List[str]:
         """Find all upstream dependencies of a node."""

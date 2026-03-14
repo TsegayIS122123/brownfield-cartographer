@@ -1,0 +1,372 @@
+/* Custom styles for Brownfield Cartographer Dashboard */
+
+body {
+    background: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding-bottom: 30px;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    border-bottom: none;
+    font-weight: 600;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+}
+
+.card-header h5, .card-header h6 {
+    margin: 0;
+    color: white;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.3s;
+    height: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #667eea;
+    line-height: 1.2;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 5px;
+}
+
+/* Graph node styles */
+.node-module {
+    fill: #ff9999;
+    stroke: #ff4444;
+    stroke-width: 2px;
+    cursor: pointer;
+}
+
+.node-dataset {
+    fill: #99ff99;
+    stroke: #44aa44;
+    stroke-width: 2px;
+    cursor: pointer;
+}
+
+.node-transformation {
+    fill: #9999ff;
+    stroke: #4444ff;
+    stroke-width: 2px;
+    cursor: pointer;
+}
+
+.node-function {
+    fill: #ffff99;
+    stroke: #aaaa44;
+    stroke-width: 2px;
+    cursor: pointer;
+}
+
+.node-unknown {
+    fill: #cccccc;
+    stroke: #666666;
+    stroke-width: 2px;
+    cursor: pointer;
+}
+
+/* Edge styles */
+.link {
+    stroke: #999;
+    stroke-opacity: 0.3;
+    stroke-width: 1.5px;
+}
+
+.link-imports {
+    stroke: #ff6b6b;
+    stroke-opacity: 0.6;
+    stroke-width: 2px;
+}
+
+.link-produces {
+    stroke: #4ecdc4;
+    stroke-opacity: 0.6;
+    stroke-width: 2px;
+}
+
+.link-consumes {
+    stroke: #45b7d1;
+    stroke-opacity: 0.6;
+    stroke-width: 2px;
+}
+
+.link-calls {
+    stroke: #f9ca24;
+    stroke-opacity: 0.6;
+    stroke-width: 2px;
+}
+
+.link-configures {
+    stroke: #a55eea;
+    stroke-opacity: 0.6;
+    stroke-width: 2px;
+}
+
+/* Tooltip */
+.tooltip {
+    position: absolute;
+    padding: 10px 15px;
+    background: rgba(0,0,0,0.85);
+    color: white;
+    border-radius: 5px;
+    pointer-events: none;
+    font-size: 12px;
+    max-width: 300px;
+    word-wrap: break-word;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Trace items */
+.trace-item {
+    padding: 15px;
+    border-left: 4px solid;
+    margin-bottom: 10px;
+    background: white;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.trace-success {
+    border-left-color: #28a745;
+}
+
+.trace-error {
+    border-left-color: #dc3545;
+}
+
+.trace-warning {
+    border-left-color: #ffc107;
+}
+
+.trace-info {
+    border-left-color: #17a2b8;
+}
+
+.trace-item pre {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    margin-top: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Documentation preview */
+#codebase-content, #brief-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 600px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+}
+
+/* Source/sink lists */
+.list-group {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+}
+
+.list-group-item {
+    font-size: 12px;
+    padding: 8px 12px;
+    cursor: default;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Graph container */
+#graph-container, #lineage-container {
+    background: white;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+    min-height: 550px;
+    position: relative;
+}
+
+/* Charts */
+.js-plotly-plot {
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+/* Loading spinner */
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .stat-value {
+        font-size: 1.8rem;
+    }
+    
+    .stat-card {
+        margin-bottom: 15px;
+    }
+    
+    #graph-container {
+        height: 400px;
+    }
+}
+
+/* Tab styling */
+.nav-tabs .nav-link {
+    color: #495057;
+    font-weight: 500;
+    border: none;
+    padding: 10px 20px;
+}
+
+.nav-tabs .nav-link.active {
+    color: #667eea;
+    background: none;
+    border-bottom: 3px solid #667eea;
+}
+
+.nav-tabs .nav-link:hover {
+    border-bottom: 3px solid #dee2e6;
+}
+
+/* Badge styling */
+.badge {
+    padding: 5px 10px;
+    font-weight: 500;
+}
+
+/* Button styling */
+.btn-outline-primary {
+    color: #667eea;
+    border-color: #667eea;
+}
+
+.btn-outline-primary:hover {
+    background-color: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+
+.btn-outline-success {
+    color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-outline-success:hover {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+/* Lineage graph specific styles */
+#lineage-container {
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    min-height: 500px;
+}
+
+.link-linkage {
+    stroke: #999;
+    stroke-opacity: 0.4;
+}
+
+/* Source/Sink lists with better formatting */
+#sources-list, #sinks-list {
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: 'Consolas', monospace;
+    font-size: 11px;
+}
+
+#sources-list .list-group-item, #sinks-list .list-group-item {
+    padding: 6px 12px;
+    border-left: 3px solid transparent;
+}
+
+#sources-list .list-group-item:hover {
+    background-color: #f0f9ff;
+    border-left-color: #4ecdc4;
+}
+
+#sinks-list .list-group-item:hover {
+    background-color: #f0f9ff;
+    border-left-color: #ff6b6b;
+}
+
+/* Tooltip improvements */
+.tooltip {
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    max-width: 400px;
+    word-wrap: break-word;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 1000;
+}
+
+.tooltip small {
+    color: #ccc;
+    font-size: 10px;
+}
